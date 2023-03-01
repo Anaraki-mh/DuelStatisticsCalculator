@@ -1,5 +1,4 @@
 ﻿using DuelStatsCalculator.Enums;
-using DuelStatsCalculator.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -15,12 +14,9 @@ namespace ConsoleApp1
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
-            foreach (var item in args)
-            {
-                Console.WriteLine(item);
-            }
+
             StatsCalculator statsCalculator = new StatsCalculator();
 
             statsCalculator.Intro();
@@ -31,12 +27,17 @@ namespace ConsoleApp1
 
             Console.Write("Run tests in all possible ranges between Range min and Range max? (y/n) ");
             if (Console.ReadLine().ToLower() == "y")
-                statsCalculator.DuelAverageInAllDamageRanges();
+            {
+                Console.WriteLine("\n\n");
+                await statsCalculator.DuelAverageInAllDamageRanges();
+            }
             else
-                statsCalculator.DuelAverage(statsCalculator.NumberOfDuels,
+            {
+                Console.WriteLine("\n\n");
+                await statsCalculator.DuelAverageWithLog(statsCalculator.NumberOfDuels,
                     statsCalculator.DamageRangeMin,
-                    statsCalculator.DamageRangeMax,
-                    true);
+                    statsCalculator.DamageRangeMax);
+            }
 
             Console.Write("\nRestart the program? (y/n) ");
             if (Console.ReadLine() == "y")

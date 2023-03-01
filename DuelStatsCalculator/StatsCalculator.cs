@@ -1,7 +1,8 @@
 ﻿using DuelStatsCalculator.Enums;
-using DuelStatsCalculator.Models;
+using DuelStatsCalculator.Structs;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -20,10 +21,19 @@ namespace DuelStatsCalculator
         public int MaxApiCalls { get; set; }
         public int NumberOfDuels { get; set; }
         public int NumberOfResults { get; set; }
-        public int NumberOfTestsRun { get; set; }
+        public ulong NumberOfTestsRun { get; set; }
+        public int AddToRedRandomDamageTakenMin { get; set; }
+        public int AddToRedRandomDamageTakenMax { get; set; }
+        public int AddToBlueRandomDamageTakenMin { get; set; }
+        public int AddToBlueRandomDamageTakenMax { get; set; }
         public bool Beep { get; set; }
+        public bool Log { get; set; }
 
         private Random Random { get; set; }
+        private DuelStats DuelStats { get; set; }
+        private Stopwatch stopwatch;
+
+
 
         #endregion
 
@@ -32,14 +42,24 @@ namespace DuelStatsCalculator
 
         public StatsCalculator()
         {
-            DamageRangeMin = 2;
-            DamageRangeMax = 40 + 1;
-            NumberOfDuels = 10000;
+            DamageRangeMin = 4;
+            DamageRangeMax = 30 + 1;
+
+            NumberOfDuels = 100_000_000;
             NumberOfResults = 10;
-            MaxApiCalls = 25;
+            MaxApiCalls = 20;
+
+            AddToRedRandomDamageTakenMin = 3;
+            AddToRedRandomDamageTakenMax = 0;
+            AddToBlueRandomDamageTakenMin = 0;
+            AddToBlueRandomDamageTakenMax = 0;
+
             Beep = false;
+            Log = false;
 
             Random = new Random();
+            DuelStats = new DuelStats();
+            stopwatch = new Stopwatch();
         }
 
         #endregion
@@ -56,9 +76,14 @@ namespace DuelStatsCalculator
             $"Damage range min: {DamageRangeMin}\n" +
             $"Damage range max: {DamageRangeMax - 1}\n" +
             $"Max number of API calls: {MaxApiCalls}\n" +
-            $"Number of duels: {NumberOfDuels}\n" +
+            $"Number of duels: {NumberOfDuels.ToString("N0")}\n" +
             $"Number of resutls to display: {NumberOfResults}\n" +
+            $"Add to Red's min random damage taken: {AddToRedRandomDamageTakenMin}\n" +
+            $"Add to Red's max random damage taken: {AddToRedRandomDamageTakenMax}\n" +
+            $"Add to Blue's min random damage taken: {AddToBlueRandomDamageTakenMin}\n" +
+            $"Add to Blue's max random damage taken: {AddToBlueRandomDamageTakenMax}\n" +
             $"Beep: {Beep}\n" +
+            $"Log: {Log}\n" +
             $"\n");
         }
 
@@ -79,32 +104,86 @@ namespace DuelStatsCalculator
             Console.Write("Number of results to display: ");
             NumberOfResults = Convert.ToInt(NumberOfResults, Console.ReadLine());
 
+            Console.Write("Add to Red's min random damage taken: ");
+            AddToRedRandomDamageTakenMin = Convert.ToInt(AddToRedRandomDamageTakenMin, Console.ReadLine());
+
+            Console.Write("Add to Red's max random damage taken: ");
+            AddToRedRandomDamageTakenMax = Convert.ToInt(AddToRedRandomDamageTakenMax, Console.ReadLine());
+
+            Console.Write("Add to Blue's min random damage taken: ");
+            AddToBlueRandomDamageTakenMin = Convert.ToInt(AddToBlueRandomDamageTakenMin, Console.ReadLine());
+
+            Console.Write("Add to Blue's max random damage taken: ");
+            AddToBlueRandomDamageTakenMax = Convert.ToInt(AddToBlueRandomDamageTakenMax, Console.ReadLine());
+
             Console.Write("Beep when done? (y/n) ");
             if (Console.ReadLine() == "y")
                 Beep = true;
+
+            Console.Write("Log the progress? (can slow the program down) (y/n) ");
+            if (Console.ReadLine() == "y")
+                Log = true;
         }
 
-        public void DuelAverageInAllDamageRanges()
+        public async Task DuelAverageInAllDamageRanges()
         {
-            List<AverageDuelStats> averageStatsList = new List<AverageDuelStats>();
+            NumberOfTestsRun = 0;
 
-            Stopwatch stopwatch = new Stopwatch();
+            List<AverageDuelStats> averageStatsList = new List<AverageDuelStats>();
+            List<Task<AverageDuelStats>> tasksList = new List<Task<AverageDuelStats>>();
+
             stopwatch.Start();
 
-            for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
+            if (Log == true)
             {
-                for (int left = DamageRangeMin; left < right; left++)
+                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
                 {
-                    Console.WriteLine($"DamageRange: {left:00} - {right:00}, Calculating...");
-
-                    averageStatsList.Add(DuelAverage(NumberOfDuels, left, right, false));
-                    Console.WriteLine("Done!");
+                    for (int left = DamageRangeMin;
+                        left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
+                        left + AddToBlueRandomDamageTakenMin < right + AddToBlueRandomDamageTakenMax
+                        ; left++)
+                    {
+                        Console.WriteLine($"Damage Range: {left:00} - {right:00}, Calculating...");
+                        tasksList.Add(DuelAverage(NumberOfDuels, left, right));
+                    }
                 }
+            }
+            else
+            {
+                Console.Write("Calculating...");
+                Console.CursorVisible = false;
+                double numberOfRanges = NumberOfRanges();
+                double completedRanges = 0;
+
+                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
+                {
+                    for (int left = DamageRangeMin;
+                        left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
+                        left + AddToBlueRandomDamageTakenMin < right + AddToBlueRandomDamageTakenMax
+                        ; left++)
+                    {
+                        Console.CursorLeft = 15;
+                        Console.Write($"(%{completedRanges / numberOfRanges * 100:0})");
+
+                        tasksList.Add(DuelAverage(NumberOfDuels, left, right));
+                        completedRanges++;
+                    }
+                }
+                Console.CursorVisible = true;
+
+            }
+
+            await Task.WhenAll(tasksList);
+
+            foreach (var task in tasksList)
+            {
+                averageStatsList.Add(task.Result);
+                //Console.WriteLine($"DamageRange: {task.Result.RangeMin:00} - {task.Result.RangeMax:00}, Done!");
             }
 
             List<AverageDuelStats> topResults = averageStatsList
                 .Where(x => x.ApiCalls <= MaxApiCalls)
-                .OrderBy(x => Math.Abs(x.BlueWon - x.RedWon))
+                .OrderBy(x => Math.Abs(x.RedWon - x.BlueWon))
                 .ThenBy(x => x.ApiCalls)
                 .Take(NumberOfResults)
                 .ToList();
@@ -116,12 +195,12 @@ namespace DuelStatsCalculator
             foreach (var result in topResults)
             {
                 Console.WriteLine($"DamageRange: {result.RangeMin:00} to {result.RangeMax:00}, " +
-                    $"Blue won: {result.BlueWon:0.000}%, Red won: {result.RedWon:0.000}%, " +
+                    $"Red won: {result.RedWon:0.000}%, Blue won: {result.BlueWon:0.000}%, " +
                     $"Api calls: {result.ApiCalls:0.0}");
             }
 
             Console.WriteLine($"\nTotal number of tests run: {NumberOfTestsRun.ToString("N0")}");
-            Console.WriteLine($"Time: {stopwatch.Elapsed.TotalSeconds}.{stopwatch.Elapsed.Milliseconds:0} s");
+            Console.WriteLine($"Time: {stopwatch.Elapsed.TotalSeconds:0.00} s");
 
             if (Beep == true)
                 Console.Beep(900, 2000);
@@ -137,101 +216,142 @@ namespace DuelStatsCalculator
                 foreach (var result in topResults)
                 {
                     Console.WriteLine($"DamageRange: {result.RangeMin:00} to {result.RangeMax:00}, " +
-                        $"Blue won: {result.BlueWon:0.000}%, Red won: {result.RedWon:0.000}%, " +
+                        $"Red won: {result.RedWon:0.000}%, Blue won: {result.BlueWon:0.000}%, " +
                         $"Api calls: {result.ApiCalls:0.0}");
                 }
             }
         }
 
-        public AverageDuelStats DuelAverage(float numberOfDuels, int min, int max, bool? log)
+        public async Task DuelAverageWithLog(float numberOfDuels, int min, int max)
         {
-            AverageDuelStats averageStats = new AverageDuelStats();
-            DuelStats stats = new DuelStats();
+            AverageDuelStats averageStats;
 
             averageStats.RangeMin = min;
             averageStats.RangeMax = max;
-            numberOfDuels++;
+            averageStats.RedWon = 0;
+            averageStats.BlueWon = 0;
+            averageStats.ApiCalls = 0;
 
-
-            if (log == true)
+            if (Log)
             {
-                for (int i = 1; i < numberOfDuels; i++)
+                stopwatch.Restart();
+
+                for (int i = 0; i < numberOfDuels; i++)
                 {
-                    Console.WriteLine($"{i}_Calculating...");
+                    DuelStats = Duel(min, max);
 
-                    Duel(ref stats, min, max);
-
-                    if (stats.Winner == Winner.Blue)
-                        averageStats.BlueWon++;
-                    else
+                    if (DuelStats.Winner == Winner.Red)
                         averageStats.RedWon++;
+                    else
+                        averageStats.BlueWon++;
 
-                    averageStats.ApiCalls += stats.NumberOfApiCalls;
+                    averageStats.ApiCalls += DuelStats.NumberOfApiCalls;
 
-                    Console.WriteLine("Done!");
+                    Console.WriteLine($"{i + 1}_ {DuelStats.Winner} won!");
                 }
+                stopwatch.Stop();
 
-                if (Beep == true)
-                    Console.Beep(900, 2000);
-
-                Console.WriteLine($"DamageRange: {averageStats.RangeMin:00} to {averageStats.RangeMax:00}, " +
-                        $"Blue won: {averageStats.BlueWon:0.000}%, Red won: {averageStats.RedWon:0.000}%, " +
-                        $"Api calls: {averageStats.ApiCalls:0.0}");
+                averageStats.RedWon = averageStats.RedWon / numberOfDuels * 100;
+                averageStats.BlueWon = averageStats.BlueWon / numberOfDuels * 100;
+                averageStats.ApiCalls = averageStats.ApiCalls / numberOfDuels;
             }
             else
             {
-                for (int i = 1; i < numberOfDuels; i++)
-                {
-                    Duel(ref stats, min, max);
-
-                    if (stats.Winner == Winner.Blue)
-                        averageStats.BlueWon++;
-                    else
-                        averageStats.RedWon++;
-
-                    averageStats.ApiCalls += stats.NumberOfApiCalls;
-                }
+                stopwatch.Restart();
+                averageStats = await DuelAverage(numberOfDuels, min, max);
+                stopwatch.Stop();
             }
 
-            averageStats.BlueWon = averageStats.BlueWon / numberOfDuels * 100;
+            Console.WriteLine($"\nDamageRange: {averageStats.RangeMin:00} to {averageStats.RangeMax - 1:00}, " +
+            $"Red won: {averageStats.RedWon:0.000}%, " +
+            $"Blue won: {averageStats.BlueWon:0.000}%, " +
+            $"Api calls: {averageStats.ApiCalls:0.0}");
+
+            Console.WriteLine($"\nTotal number of tests run: {NumberOfTestsRun.ToString("N0")}");
+            Console.WriteLine($"Time: {stopwatch.Elapsed.TotalSeconds} s");
+        }
+
+        private async Task<AverageDuelStats> DuelAverage(float numberOfDuels, int min, int max)
+        {
+            AverageDuelStats averageStats;
+
+            averageStats.RangeMin = min;
+            averageStats.RangeMax = max;
+            averageStats.RedWon = 0;
+            averageStats.BlueWon = 0;
+            averageStats.ApiCalls = 0;
+
+            for (int i = 0; i < numberOfDuels; i++)
+            {
+                DuelStats = Duel(min, max);
+
+                if (DuelStats.Winner == Winner.Red)
+                    averageStats.RedWon++;
+                else
+                    averageStats.BlueWon++;
+
+                averageStats.ApiCalls += DuelStats.NumberOfApiCalls;
+
+            }
+
             averageStats.RedWon = averageStats.RedWon / numberOfDuels * 100;
+            averageStats.BlueWon = averageStats.BlueWon / numberOfDuels * 100;
             averageStats.ApiCalls = averageStats.ApiCalls / numberOfDuels;
 
             return averageStats;
         }
 
-        private void Duel(ref DuelStats stats, int min, int max)
+        private DuelStats Duel(int min, int max)
         {
+            DuelStats duelStats;
+
             NumberOfTestsRun++;
 
-            int blue = 100;
             int red = 100;
+            int blue = 100;
 
-            stats.Winner = Winner.none;
-            stats.NumberOfApiCalls = 2;
+            duelStats.Winner = Winner.none;
+            duelStats.NumberOfApiCalls = 2;
 
             while (true)
             {
-                red = red - Random.Next(min, max);
-
-                if (red <= 0)
-                {
-                    stats.Winner = Winner.Blue;
-                    break;
-                }
-
-                stats.NumberOfApiCalls++;
-
-                blue = blue - Random.Next(min + 3, max);
+                blue = blue - Random.Next(min + AddToBlueRandomDamageTakenMin, max + AddToBlueRandomDamageTakenMax);
 
                 if (blue <= 0)
                 {
-                    stats.Winner = Winner.Red;
+                    duelStats.Winner = Winner.Red;
                     break;
                 }
 
-                stats.NumberOfApiCalls++;
+                duelStats.NumberOfApiCalls++;
+
+                red = red - Random.Next(min + AddToRedRandomDamageTakenMin, max + AddToRedRandomDamageTakenMax);
+
+                if (red <= 0)
+                {
+                    duelStats.Winner = Winner.Blue;
+                    break;
+                }
+
+                duelStats.NumberOfApiCalls++;
             }
+            return duelStats;
+        }
+
+        private int NumberOfRanges()
+        {
+            int result = 0;
+            for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
+            {
+                for (int left = DamageRangeMin;
+                    left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
+                    left + AddToBlueRandomDamageTakenMin < right + AddToBlueRandomDamageTakenMax
+                    ; left++)
+                {
+                    result++;
+                }
+            }
+            return result;
         }
 
         #endregion
