@@ -19,9 +19,9 @@ namespace DuelStatsCalculator
         public int DamageRangeMin { get; set; }
         public int DamageRangeMax { get; set; }
         public int MaxApiCalls { get; set; }
-        public int NumberOfDuels { get; set; }
+        public ulong NumberOfDuels { get; set; }
         public int NumberOfResults { get; set; }
-        public ulong NumberOfTestsRun { get; set; }
+        public ulong NumberOfTestsRun = 0;
         public int AddToRedRandomDamageTakenMin { get; set; }
         public int AddToRedRandomDamageTakenMax { get; set; }
         public int AddToBlueRandomDamageTakenMin { get; set; }
@@ -99,7 +99,7 @@ namespace DuelStatsCalculator
             MaxApiCalls = Convert.ToInt(MaxApiCalls, Console.ReadLine());
 
             Console.Write("Number of Duels (in each range): ");
-            NumberOfDuels = Convert.ToInt(NumberOfDuels, Console.ReadLine());
+            NumberOfDuels = Convert.ToUlong(NumberOfDuels, Console.ReadLine());
 
             Console.Write("Number of results to display: ");
             NumberOfResults = Convert.ToInt(NumberOfResults, Console.ReadLine());
@@ -236,7 +236,7 @@ namespace DuelStatsCalculator
             {
                 stopwatch.Restart();
 
-                for (int i = 0; i < numberOfDuels; i++)
+                for (ulong i = 0UL; i < (ulong)numberOfDuels; i++)
                 {
                     DuelStats = Duel(min, max);
 
@@ -281,7 +281,7 @@ namespace DuelStatsCalculator
             averageStats.BlueWon = 0;
             averageStats.ApiCalls = 0;
 
-            for (int i = 0; i < numberOfDuels; i++)
+            for (ulong i = 0UL; i < (ulong)numberOfDuels; i++)
             {
                 DuelStats = Duel(min, max);
 
@@ -291,7 +291,6 @@ namespace DuelStatsCalculator
                     averageStats.BlueWon++;
 
                 averageStats.ApiCalls += DuelStats.NumberOfApiCalls;
-
             }
 
             averageStats.RedWon = averageStats.RedWon / numberOfDuels * 100;
@@ -305,7 +304,8 @@ namespace DuelStatsCalculator
         {
             DuelStats duelStats;
 
-            NumberOfTestsRun++;
+            Interlocked.Increment(ref NumberOfTestsRun);
+            //NumberOfTestsRun++;
 
             int red = 100;
             int blue = 100;
