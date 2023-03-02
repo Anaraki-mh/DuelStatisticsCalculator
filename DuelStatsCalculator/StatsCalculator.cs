@@ -77,7 +77,7 @@ namespace DuelStatsCalculator
             $"Damage range max: {DamageRangeMax - 1}\n" +
             $"Max number of API calls: {MaxApiCalls}\n" +
             $"Number of duels: {NumberOfDuels.ToString("N0")}\n" +
-            $"Number of resutls to display: {NumberOfResults}\n" +
+            $"Number of results to display: {NumberOfResults}\n" +
             $"Add to Red's min random damage taken: {AddToRedRandomDamageTakenMin}\n" +
             $"Add to Red's max random damage taken: {AddToRedRandomDamageTakenMax}\n" +
             $"Add to Blue's min random damage taken: {AddToBlueRandomDamageTakenMin}\n" +
