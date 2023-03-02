@@ -136,7 +136,7 @@ namespace DuelStatsCalculator
 
             if (Log == true)
             {
-                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
+                Parallel.For(DamageRangeMin, DamageRangeMax - 1, right =>
                 {
                     for (int left = DamageRangeMin;
                         left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
@@ -146,7 +146,7 @@ namespace DuelStatsCalculator
                         Console.WriteLine($"Damage Range: {left:00} - {right:00}, Calculating...");
                         tasksList.Add(DuelAverage(NumberOfDuels, left, right));
                     }
-                }
+                });
             }
             else
             {
@@ -155,7 +155,7 @@ namespace DuelStatsCalculator
                 double numberOfRanges = NumberOfRanges();
                 double completedRanges = 0;
 
-                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
+                Parallel.For(DamageRangeMin, DamageRangeMax - 1, right =>
                 {
                     for (int left = DamageRangeMin;
                         left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
@@ -168,7 +168,7 @@ namespace DuelStatsCalculator
                         tasksList.Add(DuelAverage(NumberOfDuels, left, right));
                         completedRanges++;
                     }
-                }
+                });
                 Console.CursorVisible = true;
 
             }
