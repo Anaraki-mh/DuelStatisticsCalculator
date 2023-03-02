@@ -300,22 +300,27 @@ namespace DuelStatsCalculator
             return averageStats;
         }
 
+        private static readonly Random _random = new Random();
         private DuelStats Duel(int min, int max)
         {
-            DuelStats duelStats;
+            DuelStats duelStats = new DuelStats();
 
             Interlocked.Increment(ref NumberOfTestsRun);
-            //NumberOfTestsRun++;
 
             int red = 100;
             int blue = 100;
+            int addToBlueRandomDamageTakenMin = AddToBlueRandomDamageTakenMin;
+            int addToBlueRandomDamageTakenMax = AddToBlueRandomDamageTakenMax;
+            int addToRedRandomDamageTakenMin = AddToRedRandomDamageTakenMin;
+            int addToRedRandomDamageTakenMax = AddToRedRandomDamageTakenMax;
 
             duelStats.Winner = Winner.none;
             duelStats.NumberOfApiCalls = 2;
 
             while (true)
             {
-                blue = blue - Random.Next(min + AddToBlueRandomDamageTakenMin, max + AddToBlueRandomDamageTakenMax);
+                blue -= _random.Next(min + addToBlueRandomDamageTakenMin, max + addToBlueRandomDamageTakenMax);
+                duelStats.NumberOfApiCalls++;
 
                 if (blue <= 0)
                 {
@@ -323,18 +328,16 @@ namespace DuelStatsCalculator
                     break;
                 }
 
+                red -= _random.Next(min + addToRedRandomDamageTakenMin, max + addToRedRandomDamageTakenMax);
                 duelStats.NumberOfApiCalls++;
-
-                red = red - Random.Next(min + AddToRedRandomDamageTakenMin, max + AddToRedRandomDamageTakenMax);
 
                 if (red <= 0)
                 {
                     duelStats.Winner = Winner.Blue;
                     break;
                 }
-
-                duelStats.NumberOfApiCalls++;
             }
+
             return duelStats;
         }
 
