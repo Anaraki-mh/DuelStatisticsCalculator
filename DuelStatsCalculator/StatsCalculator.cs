@@ -77,7 +77,7 @@ namespace DuelStatsCalculator
             $"Damage range max: {DamageRangeMax - 1}\n" +
             $"Max number of API calls: {MaxApiCalls}\n" +
             $"Number of duels: {NumberOfDuels.ToString("N0")}\n" +
-            $"Number of resutls to display: {NumberOfResults}\n" +
+            $"Number of results to display: {NumberOfResults}\n" +
             $"Add to Red's min random damage taken: {AddToRedRandomDamageTakenMin}\n" +
             $"Add to Red's max random damage taken: {AddToRedRandomDamageTakenMax}\n" +
             $"Add to Blue's min random damage taken: {AddToBlueRandomDamageTakenMin}\n" +
@@ -136,7 +136,7 @@ namespace DuelStatsCalculator
 
             if (Log == true)
             {
-                Parallel.For(DamageRangeMin, DamageRangeMax - 1, right =>
+                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
                 {
                     for (int left = DamageRangeMin;
                         left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
@@ -146,7 +146,7 @@ namespace DuelStatsCalculator
                         Console.WriteLine($"Damage Range: {left:00} - {right:00}, Calculating...");
                         tasksList.Add(DuelAverage(NumberOfDuels, left, right));
                     }
-                });
+                }
             }
             else
             {
@@ -155,7 +155,7 @@ namespace DuelStatsCalculator
                 double numberOfRanges = NumberOfRanges();
                 double completedRanges = 0;
 
-                Parallel.For(DamageRangeMin, DamageRangeMax - 1, right =>
+                for (int right = DamageRangeMax - 1; right > DamageRangeMin; right--)
                 {
                     for (int left = DamageRangeMin;
                         left + AddToRedRandomDamageTakenMin < right + AddToRedRandomDamageTakenMax &&
@@ -168,7 +168,7 @@ namespace DuelStatsCalculator
                         tasksList.Add(DuelAverage(NumberOfDuels, left, right));
                         completedRanges++;
                     }
-                });
+                }
                 Console.CursorVisible = true;
 
             }
